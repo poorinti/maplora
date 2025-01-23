@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>MGRS Conversion</title>
+  <script src="https://unpkg.com/mgrs@latest/mgrs.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .container { max-width: 500px; margin: auto; }
+    label { display: block; margin-top: 10px; }
+    input { width: 100%; padding: 8px; margin-top: 5px; }
+    button { padding: 10px 20px; margin-top: 20px; }
+    #result { margin-top: 20px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MGRS Conversion</h1>
+    <div>
+      <label>
+        <input type="radio" name="inputType" value="latlon" checked> แปลงจาก Latitude/Longitude เป็น MGRS
+      </label>
+      <label>
+        <input type="radio" name="inputType" value="mgrs"> แปลงจาก MGRS เป็น Latitude/Longitude
+      </label>
+    </div>
+
+    <div id="latlonInput">
+      <label>Latitude:
+        <input type="number" id="latitude" step="any" placeholder="เช่น 13.7563">
+      </label>
+      <label>Longitude:
+        <input type="number" id="longitude" step="any" placeholder="เช่น 100.5018">
+      </label>
+    </div>
+
+    <div id="mgrsInput" style="display: none;">
+      <label>MGRS:
+        <input type="text" id="mgrsString" placeholder="เช่น 47QFJ12345">
+      </label>
+    </div>
+
+    <button onclick="convertCoordinates()">แปลง</button>
+
+    <div id="result"></div>
+  </div>
+
+  <script>
+    // ฟังก์ชันแปลงละติจูดและลองจิจูดเป็น MGRS
+    function latLonToMGRS(latitude, longitude, precision = 5) {
+      try {
+        return mgrs.forward([longitude, latitude], precision);
+      } catch (error) {
+        console.error('Error converting Lat/Lon to MGRS:', error);
+        return null;
+      }
+    }
+
+    // ฟังก์ชันแปลง MGRS เป็นละติจูดและลองจิจูด
+    function mgrsToLatLon(mgrsString) {
+      try {
+        const [longitude, latitude] = mgrs.toPoint(mgrsString);
+        return { latitude, longitude };
+      } catch (error) {
+        console.error('Error converting MGRS to Lat/Lon:', error);
+        return null;
+      }
+  

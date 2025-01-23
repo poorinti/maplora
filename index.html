@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>LoRamap</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css">
+    <!-- Custom CSS สำหรับแผนที่และ Sidebar -->
+    <style>
+        /* กำหนดพื้นฐานสำหรับ body และ html */
+        body, html {
+            height: 100%;
+            margin: 0;
+            position: relative;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        /* สไตล์แผนที่ */
+        #map {
+            height: 100%;
+            width: 100%;
+            position: relative;
+            z-index: 1; /* อยู่ใต้ Sidebar */
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            overflow: hidden;
+        }
+
+        /* สไตล์ Sidebar */
+        #sidebar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            max-height: 80%; /* กำหนดความสูงสูงสุดของ Sidebar */
+            background-color: rgba(202, 202, 202, 0.568); /* สีพื้นหลังโปร่งใส */
+            padding: 20px;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.2);
+            transform: translateY(100%); /* ซ่อน Sidebar โดยเลื่อนลงมาจากด้านล่าง */
+            transition: transform 0.3s ease;
+            z-index: 1000; /* อยู่เหนือแผนที่ */
+            overflow-y: auto;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+        }
+
+        /* สไตล์ Sidebar เปิด */
+        #sidebar.active {
+            transform: translateY(0); /* แสดง Sidebar โดยเลื่อนขึ้นมา */
+        }
+
+        /* สไตล์ Header ใน Sidebar */
+        .sidebar-header {
+            display: flex;
+            flex-direction: column; /* จัดวางในแนวตั้ง */
+            align-items: center; /* จัดให้อยู่กึ่งกลางในแนวนอน */
+            margin-bottom: 7px;
+        }
+
+        .sidebar-logo {
+            height: 65px;
+            width: auto;
+            margin-bottom: 7px; /* เพิ่มระยะห่างระหว่างโลโก้กับหัวข้อ */
+            border-radius: 10px; /* ทำให้โลโก้มีมุมโค้ง */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* เพิ่มเงาให้โลโก้ดูโดดเด่น */
+        }
+
+        /* สไตล์หัวข้อใน Sidebar */
+        #sidebar h5 {
+            font-weight: 600;
+            color: #343a40;
+            margin: 0; /* ลบ margin ด้านล่างเพื่อความเรียบร้อย */
+        }
+
+        /* สไตล์ปุ่ม Toggle */
+        .sidebar-toggle-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1100; /* อยู่เหนือ Sidebar */
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            background-color: #007bff; /* สีพื้นหลังปุ่ม */
+            color: white; /* สีไอคอน */
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        /* เปลี่ยนสีปุ่มเมื่อโฮเวอร์ */
+        .sidebar-toggle-btn:hover {
+            background-color: #0056b3;
+            transform: scale(1.1);
+        }
+
+        /* ปรับขนาดไอคอนในปุ่ม Toggle */
+        .sidebar-toggle-btn i {
+            font-size: 1.8rem; /* ปรับขนาดไอคอน */
+        }
+
+        /* สไตล์ตารางใน Sidebar */
+        #markersTable {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #markersTable th {
+            background-color: #007bff;
+            color: white;
+            text-align: center;
+            padding: 10px;
+        }
+
+        #markersTable td {
+            text-align: center;
+            vertical-align: middle;
+            padding: 8px;
+        }
+
+        /* ปรับแต่ง scrollbar ใน Sidebar */
+        #sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #sidebar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        /* Responsive Design สำหรับ Sidebar */
+        @media (max-width: 768px) {
+            #sidebar.active {
+                max-height: 60%; /* ปรับความสูงสำหรับหน้าจอเล็ก */
+            }
+
+            .sidebar-toggle-btn {
+                width: 50px;
+                height: 50px;
+                bottom: 20px;
+                right: 20px;
+            }
+
+            .sidebar-toggle-btn i {
+                font-size: 1.5rem;
+            }
+
+            .sidebar-header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+
+            .sidebar-logo {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+
+            #markersTable th, #markersTable td {
+                padding: 6px;
+            }
+        }
+    </style>
+    <!-- เพิ่มลิงก์ Favicon -->
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <!-- ถ้าคุณใช้ไฟล์ PNG -->
+    <!-- <link rel="icon" href="images/favicon.png" type="image/png"> -->
+    <!-- สำหรับ Apple Touch Icon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
+</head>
+<body>
+    <!-- Container สำหรับแผนที่ -->
+    <div id="map"></div>
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <img src="images/logo1.png" alt="logo1" class="sidebar-logo">
+        </div>
+        <table class="table table-striped" id="markersTable">
+            <thead>
+                <tr>
+                    
+                    <th>API Name</th>
+                    <th>Name</th>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- ข้อมูลจะถูกเพิ่มด้วย JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ปุ่ม Toggle สำหรับ Sidebar -->
+    <button class="sidebar-toggle-btn" type="button" id="sidebarToggle" data-bs-toggle="tooltip" data-bs-placement="top" title="แสดง/ซ่อน ข้อมูล">
+        <i class="bi bi-list"></i>
+    </button>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <!-- รวมไฟล์ JavaScript -->
+    <script src="app.js"></script>
+
+    <script src="https://unpkg.com/mgrs@latest/mgrs.js"></script>
+
+    <!-- JavaScript สำหรับ Toggle Sidebar และ Tooltip -->
+    <script>
+        document.getElementById('sidebarToggle').addEventListener('click', function () {
+            document.getElementById('sidebar').classList.toggle('active');
+            // หลังจากเปิด/ปิด Sidebar ให้แผนที่ปรับขนาดใหม่
+            setTimeout(function () {
+                if (typeof map !== 'undefined') {
+                    map.invalidateSize();
+                }
+            }, 300); // รอให้การเปลี่ยนแปลง CSS เสร็จสิ้นก่อน
+        });
+
+        // Initialize Bootstrap tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+          return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    </script>
+</body>
+</html>
